@@ -62,8 +62,9 @@ export const Transfer = () => {
       }
       await fetchData();
     } catch (err) {
-      if (err.response?.data?.message) {
-        toast.error(err.response.data.message);
+      const errMsg = err.response?.data?.error || err.response?.data?.message;
+      if (errMsg) {
+        toast.error(errMsg);
       } else {
         toast.error('Transfer failed');
       }

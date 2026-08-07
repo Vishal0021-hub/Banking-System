@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Button, Input } from '../../components/ui';
+import { Card, Button, Input, cn } from '../../components/ui';
 import { 
   PiggyBank, 
   Plus, 
@@ -16,6 +16,7 @@ import toast from 'react-hot-toast';
 
 export const Loans = () => {
   const [loans, setLoans] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showApply, setShowApply] = useState(false);
   const [showCalc, setShowCalc] = useState(false);
@@ -33,10 +34,31 @@ export const Loans = () => {
 
   const fetchLoans = async () => {
     try {
-      const res = await api.get('/loans/my-loans');
-      setLoans(res.data.data);
+      let fetchedLoans = [];
+      try {
+        const res = await api.get('/loans/my-loans');
+        fetchedLoans = res.data?.data || [];
+      } catch (err) {
+        console.error('Failed to load loans:', err);
+      }
+      setLoans(fetchedLoans);
+
+      let fetchedAccounts = [];
+      try {
+        const res = await api.get('/accounts');
+        fetchedAccounts = res.data?.data || [];
+      } catch (err) {
+        console.error('Failed to load accounts:', err);
+      }
+      setAccounts(fetchedAccounts);
+
+      if (fetchedAccounts.length > 0) {
+        setLoanApp(prev => ({ ...prev, accountNumber: prev.accountNumber || fetchedAccounts[0].accountNumber }));
+      }
     } catch (err) {
-      toast.error('Failed to load loans');
+      toast.error('Failed to load data');
+      setLoans([]);
+      setAccounts([]);
     } finally {
       setLoading(false);
     }
@@ -64,7 +86,7 @@ export const Loans = () => {
       setShowApply(false);
       fetchLoans();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Application failed');
+      toast.error(err.response?.data?.error || err.response?.data?.message || 'Application failed');
     }
   };
 
@@ -158,13 +180,22 @@ export const Loans = () => {
                   <option value="EDUCATION">Education Loan (7.5%)</option>
                 </select>
               </div>
-              <Input
-                label="Disbursement Account Number"
-                placeholder="Enter your account number"
-                required
-                value={loanApp.accountNumber}
-                onChange={(e) => setLoanApp({ ...loanApp, accountNumber: e.target.value })}
-              />
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-slate-300">Disbursement Account</label>
+                <select 
+                  className="flex h-10 w-full rounded-md border border-input bg-slate-900/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/50"
+                  required
+                  value={loanApp.accountNumber}
+                  onChange={(e) => setLoanApp({ ...loanApp, accountNumber: e.target.value })}
+                >
+                  <option value="" disabled>Select an account</option>
+                  {accounts.map(acc => (
+                    <option key={acc.id} value={acc.accountNumber}>
+                      {acc.accountNumber} ({acc.accountType} - Bal: ₹{Number(acc.balance).toLocaleString()})
+                    </option>
+                  ))}
+                </select>
+              </div>
               <Input
                 label="Required Amount (₹)"
                 type="number"
@@ -200,7 +231,7 @@ export const Loans = () => {
       <div className="space-y-4">
         <h4 className="text-lg font-semibold flex items-center gap-2"><History size={20} className="text-primary" /> Loan History</h4>
         <div className="grid grid-cols-1 gap-4">
-          {loans.map((loan) => (
+          {Array.isArray(loans) && loans.map((loan) => (
             <Card key={loan.id} className="flex flex-col md:flex-row items-center justify-between gap-6 hover:bg-white/5 transition-colors">
               <div className="flex items-center gap-4 w-full md:w-auto">
                 <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-primary">

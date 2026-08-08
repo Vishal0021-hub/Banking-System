@@ -1,6 +1,0 @@
-com\banking\admin\client\UserServiceClient.class
-com\banking\admin\config\SecurityConfig.class
-com\banking\admin\AdminServiceApplication.class
-com\banking\admin\client\TransactionServiceClient.class
-com\banking\admin\client\AccountServiceClient.class
-com\banking\admin\controller\AdminController.class

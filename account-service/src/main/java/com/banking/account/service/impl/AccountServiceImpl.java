@@ -126,9 +126,17 @@ public class AccountServiceImpl implements AccountService {
     @Override
     @Transactional
     public Beneficiary addBeneficiary(Long userId, AddBeneficiaryRequest request) {
+        Account beneficiaryAccount = accountRepository.findByAccountNumber(request.getAccountNumber())
+                .orElseThrow(() -> new BadRequestException("Invalid beneficiary account. Account number does not exist in our system."));
+
+        if (beneficiaryAccount.getUserId().equals(userId)) {
+            throw new BadRequestException("You cannot add your own account as a beneficiary");
+        }
+
         if (beneficiaryRepository.existsByUserIdAndAccountNumber(userId, request.getAccountNumber())) {
             throw new BadRequestException("Beneficiary with this account number already exists");
         }
+
         Beneficiary b = Beneficiary.builder()
                 .userId(userId)
                 .name(request.getName())

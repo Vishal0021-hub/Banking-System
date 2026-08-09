@@ -44,7 +44,7 @@ export const Accounts = () => {
       if (err.response?.data?.data && typeof err.response.data.data === 'object') {
         Object.values(err.response.data.data).forEach(msg => toast.error(msg));
       } else {
-        toast.error(err.response?.data?.message || 'Failed to create account');
+        toast.error(err.response?.data?.error || err.response?.data?.message || 'Failed to create account');
       }
     }
   };

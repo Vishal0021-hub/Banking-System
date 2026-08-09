@@ -29,7 +29,7 @@ export const Signup = () => {
         // Display specific validation errors
         Object.values(err.response.data.data).forEach(msg => toast.error(msg));
       } else {
-        toast.error(err.response?.data?.message || 'Registration failed');
+        toast.error(err.response?.data?.error || err.response?.data?.message || 'Registration failed');
       }
     } finally {
       setLoading(false);

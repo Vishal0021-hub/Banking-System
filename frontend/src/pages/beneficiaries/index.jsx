@@ -8,7 +8,7 @@ export const Beneficiaries = () => {
   const [beneficiaries, setBeneficiaries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
-  const [newBen, setNewBen] = useState({ name: '', accountNumber: '', bankName: '', ifscCode: '' });
+  const [newBen, setNewBen] = useState({ name: '', accountNumber: '', bankName: 'Enterprise Bank', ifscCode: 'BANK0001234' });
 
   const fetchBeneficiaries = async () => {
     try {
@@ -31,13 +31,13 @@ export const Beneficiaries = () => {
       await api.post('/beneficiaries', newBen);
       toast.success('Beneficiary added successfully');
       setShowAdd(false);
-      setNewBen({ name: '', accountNumber: '', bankName: '', ifscCode: '' });
+      setNewBen({ name: '', accountNumber: '', bankName: 'Enterprise Bank', ifscCode: 'BANK0001234' });
       fetchBeneficiaries();
     } catch (err) {
       if (err.response?.data?.data && typeof err.response.data.data === 'object') {
         Object.values(err.response.data.data).forEach(msg => toast.error(msg));
       } else {
-        toast.error(err.response?.data?.message || 'Failed to add beneficiary');
+        toast.error(err.response?.data?.error || err.response?.data?.message || 'Failed to add beneficiary');
       }
     }
   };

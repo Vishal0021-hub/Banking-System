@@ -1,22 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Button } from '../../components/ui';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  ArrowUpRight, 
-  Plus, 
+import { Card, Button, cn } from '../../components/ui';
+import {
+  TrendingUp,
+  TrendingDown,
+  ArrowUpRight,
+  Plus,
   ArrowRight,
   Clock,
   ShieldAlert
 } from 'lucide-react';
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer 
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
 } from 'recharts';
 import api from '../../api/axios';
 import toast from 'react-hot-toast';
@@ -39,14 +39,27 @@ export const Dashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [accRes, txnRes] = await Promise.all([
-          api.get('/accounts'),
-          api.get('/transactions?size=5')
-        ]);
-        setAccounts(accRes.data.data);
-        setTransactions(txnRes.data.data.content || []);
+        let fetchedAccounts = [];
+        try {
+          const accRes = await api.get('/accounts');
+          fetchedAccounts = accRes.data?.data || [];
+        } catch (err) {
+          console.error('Failed to load accounts:', err);
+        }
+        setAccounts(fetchedAccounts);
+
+        let fetchedTransactions = [];
+        try {
+          const txnRes = await api.get('/transactions?size=5');
+          fetchedTransactions = txnRes.data?.data?.content || [];
+        } catch (err) {
+          console.error('Failed to load transactions:', err);
+        }
+        setTransactions(fetchedTransactions);
       } catch (err) {
         toast.error('Failed to load dashboard data');
+        setAccounts([]);
+        setTransactions([]);
       } finally {
         setLoading(false);
       }
@@ -78,14 +91,14 @@ export const Dashboard = () => {
             <h3 className="text-2xl font-bold">{accounts.length}</h3>
           </div>
           <div className="flex -space-x-2 mt-4">
-             {accounts.slice(0, 3).map((_, i) => (
-               <div key={i} className="w-8 h-8 rounded-full border-2 border-slate-900 premium-gradient" />
-             ))}
-             {accounts.length > 3 && (
-               <div className="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center text-[10px] font-bold">
-                 +{accounts.length - 3}
-               </div>
-             )}
+            {accounts.slice(0, 3).map((_, i) => (
+              <div key={i} className="w-8 h-8 rounded-full border-2 border-slate-900 premium-gradient" />
+            ))}
+            {accounts.length > 3 && (
+              <div className="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center text-[10px] font-bold">
+                +{accounts.length - 3}
+              </div>
+            )}
           </div>
         </Card>
 
@@ -115,14 +128,14 @@ export const Dashboard = () => {
               <AreaChart data={data}>
                 <defs>
                   <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
                 <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `₹${v}`} />
-                <Tooltip 
+                <Tooltip
                   contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px' }}
                   itemStyle={{ color: '#0ea5e9' }}
                 />

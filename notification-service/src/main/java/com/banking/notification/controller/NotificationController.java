@@ -12,12 +12,22 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+import com.banking.notification.service.SseService;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
 @RestController
 @RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor
 public class NotificationController {
 
     private final NotificationRepository notificationRepository;
+    private final SseService sseService;
+
+    @GetMapping("/stream")
+    public SseEmitter stream(HttpServletRequest req) {
+        Long userId = Long.parseLong(req.getHeader("X-User-Id"));
+        return sseService.createEmitter(userId);
+    }
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<Notification>>> getAll(HttpServletRequest req) {

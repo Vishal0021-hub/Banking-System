@@ -10,7 +10,7 @@ Inspired by JPMorgan Chase internal banking platforms. A full-stack, microservic
 | Service | Port | Description |
 |---|---|---|
 | `eureka-server` | 8761 | Service Discovery |
-| `api-gateway` | 8080 | Edge Server & Routing |
+| `api-gateway` | 8088 | Edge Server & Routing |
 | `auth-service` | 8081 | Identity Management & JWT |
 | `user-service` | 8082 | Profile & KYC |
 | `account-service` | 8083 | Accounts & Beneficiaries |

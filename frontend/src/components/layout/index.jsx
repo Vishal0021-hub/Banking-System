@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { 
   LayoutDashboard, 
   CreditCard, 
@@ -40,6 +42,45 @@ export const Layout = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    let ctrl;
+    const connectSSE = async () => {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      ctrl = new AbortController();
+      try {
+        await fetchEventSource('http://localhost:8088/api/v1/notifications/stream', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          signal: ctrl.signal,
+          onmessage(msg) {
+            if (msg.event === 'notification') {
+              const data = JSON.parse(msg.data);
+              toast.success(data.title + '\\n' + data.message, { duration: 5000 });
+            }
+          },
+          onerror(err) {
+            console.error('SSE Error:', err);
+            throw err; // triggers reconnect
+          }
+        });
+      } catch (err) {
+        // fetchEventSource handles reconnects
+      }
+    };
+
+    connectSSE();
+
+    return () => {
+      if (ctrl) {
+        ctrl.abort();
+      }
+    };
+  }, []);
 
   const handleLogout = () => {
     logout();

@@ -104,11 +104,13 @@ public class TransactionController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             HttpServletRequest req) {
 
-        Long userId = Long.parseLong(req.getHeader("X-User-Id"));
+        // Long userId = Long.parseLong(req.getHeader("X-User-Id"));
         String holderName = req.getHeader("X-User-Email");
 
-        if (from == null) from = LocalDate.now().withDayOfMonth(1);
-        if (to == null) to = LocalDate.now();
+        if (from == null)
+            from = LocalDate.now().withDayOfMonth(1);
+        if (to == null)
+            to = LocalDate.now();
 
         Pageable pageable = PageRequest.of(0, 500);
         List<TransactionDto> transactions = transactionService
@@ -118,8 +120,7 @@ public class TransactionController {
                 accountNumber, holderName,
                 from.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
                 to.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
-                transactions
-        );
+                transactions);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,

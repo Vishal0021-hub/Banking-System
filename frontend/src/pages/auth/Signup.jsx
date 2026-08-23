@@ -19,6 +19,29 @@ export const Signup = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    const password = formData.password;
+    if (password.length < 8) {
+      toast.error('Password must be at least 8 characters long');
+      return;
+    }
+    if (!/[A-Z]/.test(password)) {
+      toast.error('Password must contain at least one uppercase letter');
+      return;
+    }
+    if (!/[a-z]/.test(password)) {
+      toast.error('Password must contain at least one lowercase letter');
+      return;
+    }
+    if (!/[0-9]/.test(password)) {
+      toast.error('Password must contain at least one numeric digit');
+      return;
+    }
+    if (!/[@$!%*?&]/.test(password)) {
+      toast.error('Password must contain at least one special character (@$!%*?&)');
+      return;
+    }
+
     setLoading(true);
     try {
       await api.post('/auth/register', formData);

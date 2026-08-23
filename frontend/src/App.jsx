@@ -12,6 +12,7 @@ import { Loans } from './pages/loans';
 import { Notifications } from './pages/notifications';
 import { Admin } from './pages/admin';
 import useAuthStore from './store/authStore';
+import api from './api/axios';
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
   const { isAuthenticated, user } = useAuthStore();
@@ -26,6 +27,20 @@ const PublicRoute = ({ children }) => {
 };
 
 function App() {
+  React.useEffect(() => {
+    const checkSession = async () => {
+      const { isAuthenticated, logout } = useAuthStore.getState();
+      if (isAuthenticated) {
+        try {
+          await api.get('/users/me');
+        } catch (err) {
+          logout();
+        }
+      }
+    };
+    checkSession();
+  }, []);
+
   return (
     <BrowserRouter>
       <Toaster 

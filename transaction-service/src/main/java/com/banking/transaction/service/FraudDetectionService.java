@@ -28,10 +28,11 @@ public class FraudDetectionService {
     private static final int MAX_TRANSACTIONS_PER_10_MIN = 5;
     private static final int MAX_TRANSACTIONS_PER_DAY = 20;
 
-    public record FraudResult(boolean flagged, String reason) {}
+    public record FraudResult(boolean flagged, String reason) {
+    };
 
     public FraudResult analyze(String fromAccountNumber, BigDecimal amount,
-                                String toAccountNumber, Long userId) {
+            String toAccountNumber, Long userId) {
         // Rule 1: Large single transaction
         if (amount.compareTo(LARGE_AMOUNT_THRESHOLD) > 0) {
             log.warn("FRAUD ALERT: Large transaction ₹{} from {}", amount, fromAccountNumber);

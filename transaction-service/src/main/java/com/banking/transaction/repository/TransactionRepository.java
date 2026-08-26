@@ -17,37 +17,37 @@ import java.util.Optional;
 
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
-    Optional<Transaction> findByReferenceNumber(String referenceNumber);
+       Optional<Transaction> findByReferenceNumber(String referenceNumber);
 
-    Page<Transaction> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+       Page<Transaction> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
-    @Query("SELECT t FROM Transaction t WHERE " +
-           "(t.fromAccountNumber = :accountNumber OR t.toAccountNumber = :accountNumber) " +
-           "ORDER BY t.createdAt DESC")
-    Page<Transaction> findByAccountNumber(@Param("accountNumber") String accountNumber, Pageable pageable);
+       @Query("SELECT t FROM Transaction t WHERE " +
+                     "(t.fromAccountNumber = :accountNumber OR t.toAccountNumber = :accountNumber) " +
+                     "ORDER BY t.createdAt DESC")
+       Page<Transaction> findByAccountNumber(@Param("accountNumber") String accountNumber, Pageable pageable);
 
-    @Query("SELECT t FROM Transaction t WHERE t.fromAccountNumber = :accountNumber " +
-           "AND t.transactionType = 'TRANSFER' " +
-           "AND t.createdAt >= :since AND t.status = 'SUCCESS'")
-    List<Transaction> findTransfersSince(@Param("accountNumber") String accountNumber,
-                                          @Param("since") LocalDateTime since);
+       @Query("SELECT t FROM Transaction t WHERE t.fromAccountNumber = :accountNumber " +
+                     "AND t.transactionType = 'TRANSFER' " +
+                     "AND t.createdAt >= :since AND t.status = 'SUCCESS'")
+       List<Transaction> findTransfersSince(@Param("accountNumber") String accountNumber,
+                     @Param("since") LocalDateTime since);
 
-    @Query("SELECT COUNT(t) FROM Transaction t WHERE t.fromAccountNumber = :accountNumber " +
-           "AND t.createdAt >= :since")
-    long countTransactionsSince(@Param("accountNumber") String accountNumber,
-                                 @Param("since") LocalDateTime since);
+       @Query("SELECT COUNT(t) FROM Transaction t WHERE t.fromAccountNumber = :accountNumber " +
+                     "AND t.createdAt >= :since")
+       long countTransactionsSince(@Param("accountNumber") String accountNumber,
+                     @Param("since") LocalDateTime since);
 
-    @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.fromAccountNumber = :accountNumber " +
-           "AND t.transactionType = 'TRANSFER' AND t.status = 'SUCCESS' " +
-           "AND t.createdAt >= :since")
-    BigDecimal sumTransferAmountSince(@Param("accountNumber") String accountNumber,
-                                       @Param("since") LocalDateTime since);
+       @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.fromAccountNumber = :accountNumber " +
+                     "AND t.transactionType = 'TRANSFER' AND t.status = 'SUCCESS' " +
+                     "AND t.createdAt >= :since")
+       BigDecimal sumTransferAmountSince(@Param("accountNumber") String accountNumber,
+                     @Param("since") LocalDateTime since);
 
-    List<Transaction> findByFraudFlaggedTrue();
+       List<Transaction> findByFraudFlaggedTrue();
 
-    @Query("SELECT t FROM Transaction t WHERE t.createdAt BETWEEN :start AND :end ORDER BY t.createdAt DESC")
-    List<Transaction> findBetweenDates(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+       @Query("SELECT t FROM Transaction t WHERE t.createdAt BETWEEN :start AND :end ORDER BY t.createdAt DESC")
+       List<Transaction> findBetweenDates(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
-    List<Transaction> findByUserIdAndTransactionTypeAndCreatedAtBetween(
-            Long userId, TransactionType type, LocalDateTime start, LocalDateTime end);
+       List<Transaction> findByUserIdAndTransactionTypeAndCreatedAtBetween(
+                     Long userId, TransactionType type, LocalDateTime start, LocalDateTime end);
 }

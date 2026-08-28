@@ -14,6 +14,7 @@ import com.banking.transaction.repository.AuditLogRepository;
 import com.banking.transaction.repository.TransactionRepository;
 import com.banking.transaction.service.FraudDetectionService;
 import com.banking.transaction.service.TransactionService;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -40,6 +41,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Transactional
+    @CircuitBreaker(name = "accountService", fallbackMethod = "depositFallback")
     public TransactionDto deposit(DepositRequest request, Long userId, String ipAddress) {
         var accountResponse = accountServiceClient.getAccount(request.getAccountNumber());
         if (accountResponse == null || accountResponse.getData() == null) {
@@ -76,6 +78,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Transactional
+    @CircuitBreaker(name = "accountService", fallbackMethod = "withdrawFallback")
     public TransactionDto withdraw(WithdrawRequest request, Long userId, String ipAddress) {
         var accountResponse = accountServiceClient.getAccount(request.getAccountNumber());
         Map<String, Object> accountData = accountResponse.getData();
@@ -112,6 +115,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Transactional
+    @CircuitBreaker(name = "accountService", fallbackMethod = "transferFallback")
     public TransactionDto transfer(TransferRequest request, Long userId, String ipAddress) {
         if (request.getFromAccountNumber().equals(request.getToAccountNumber())) {
             throw new BadRequestException("Cannot transfer to the same account");
@@ -257,5 +261,20 @@ public class TransactionServiceImpl implements TransactionService {
                 .createdAt(t.getCreatedAt())
                 .completedAt(t.getCompletedAt())
                 .build();
+    }
+
+    public TransactionDto depositFallback(DepositRequest request, Long userId, String ipAddress, Throwable t) {
+        log.error("Circuit breaker 'accountService' triggered for deposit. Error: {}", t.getMessage());
+        throw new BadRequestException("Account service is temporarily unavailable. Please try again later.");
+    }
+
+    public TransactionDto withdrawFallback(WithdrawRequest request, Long userId, String ipAddress, Throwable t) {
+        log.error("Circuit breaker 'accountService' triggered for withdraw. Error: {}", t.getMessage());
+        throw new BadRequestException("Account service is temporarily unavailable. Please try again later.");
+    }
+
+    public TransactionDto transferFallback(TransferRequest request, Long userId, String ipAddress, Throwable t) {
+        log.error("Circuit breaker 'accountService' triggered for transfer. Error: {}", t.getMessage());
+        throw new BadRequestException("Account service is temporarily unavailable. Please try again later.");
     }
 }

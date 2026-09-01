@@ -1,6 +1,7 @@
 package com.banking.transaction.kafka;
 
 import com.banking.transaction.entity.Transaction;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -11,7 +12,9 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class TransactionEventProducer {
 
+    @Getter
     private final KafkaTemplate<String, String> kafkaTemplate;
+    
     private static final String TOPIC = "transaction-events";
 
     public void publishTransactionEvent(Transaction txn) {

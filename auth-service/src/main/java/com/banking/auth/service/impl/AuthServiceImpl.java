@@ -69,8 +69,8 @@ public class AuthServiceImpl implements AuthService {
         // Publish welcome event
         try {
             kafkaTemplate.send("user-events",
-                    String.format("{\"event\":\"USER_REGISTERED\",\"userId\":%d,\"email\":\"%s\",\"name\":\"%s\"}",
-                            user.getId(), user.getEmail(), user.getFullName()));
+                    String.format("{\"event\":\"USER_REGISTERED\",\"userId\":%d,\"email\":\"%s\",\"name\":\"%s\",\"phone\":\"%s\"}",
+                            user.getId(), user.getEmail(), user.getFullName(), user.getPhone()));
         } catch (Exception e) {
             log.warn("Failed to publish user registration event: {}", e.getMessage());
         }

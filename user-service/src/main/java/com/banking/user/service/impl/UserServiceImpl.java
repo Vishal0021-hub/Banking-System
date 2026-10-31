@@ -25,7 +25,33 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserProfileDto getProfile(Long authUserId) {
         UserProfile profile = userProfileRepository.findByAuthUserId(authUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("UserProfile", "authUserId", authUserId));
+                .orElseGet(() -> {
+                    log.warn("UserProfile not found for authUserId {}. Creating default profile.", authUserId);
+                    UserProfile newProfile = UserProfile.builder()
+                            .authUserId(authUserId)
+                            .email("user" + authUserId + "@bank.com")
+                            .fullName("Bank Customer")
+                            .phone("0000000000")
+                            .build();
+                    return userProfileRepository.save(newProfile);
+                });
+        return mapToDto(profile);
+    }
+
+    @Override
+    @Transactional
+    public UserProfileDto getProfileOrAutoCreate(Long authUserId, String email, String fullName) {
+        UserProfile profile = userProfileRepository.findByAuthUserId(authUserId)
+                .orElseGet(() -> {
+                    log.info("Auto-initializing UserProfile for authUserId: {}, email: {}", authUserId, email);
+                    UserProfile newProfile = UserProfile.builder()
+                            .authUserId(authUserId)
+                            .email(email != null && !email.isBlank() ? email : "user" + authUserId + "@bank.com")
+                            .fullName(fullName != null && !fullName.isBlank() ? fullName : "Bank Customer")
+                            .phone("0000000000")
+                            .build();
+                    return userProfileRepository.save(newProfile);
+                });
         return mapToDto(profile);
     }
 
@@ -39,12 +65,27 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserProfileDto createProfile(Long authUserId, String email, String fullName, String phone) {
-        UserProfile profile = UserProfile.builder()
-                .authUserId(authUserId)
-                .email(email)
-                .fullName(fullName)
-                .phone(phone)
-                .build();
+        return createProfile(authUserId, email, fullName, phone, null, null);
+    }
+
+    @Override
+    @Transactional
+    public UserProfileDto createProfile(Long authUserId, String email, String fullName, String phone, String panNumber, String aadharNumber) {
+        UserProfile profile = userProfileRepository.findByAuthUserId(authUserId)
+                .orElseGet(() -> UserProfile.builder()
+                        .authUserId(authUserId)
+                        .email(email)
+                        .fullName(fullName)
+                        .phone(phone)
+                        .panNumber(panNumber)
+                        .aadharNumber(aadharNumber)
+                        .build());
+        if (panNumber != null && !panNumber.isBlank()) {
+            profile.setPanNumber(panNumber);
+        }
+        if (aadharNumber != null && !aadharNumber.isBlank()) {
+            profile.setAadharNumber(aadharNumber);
+        }
         profile = userProfileRepository.save(profile);
         return mapToDto(profile);
     }

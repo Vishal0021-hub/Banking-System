@@ -118,7 +118,7 @@ public class NotificationEventConsumer {
 
     private void sendEmailAsync(Long userId, String subject, String templateName, Map<String, Object> variables) {
         try {
-            ApiResponse<Map<String, Object>> response = userClient.getProfile(String.valueOf(userId));
+            ApiResponse<Map<String, Object>> response = userClient.getProfile(userId);
             if (response.isSuccess() && response.getData() != null) {
                 String email = (String) response.getData().get("email");
                 if (email != null) {

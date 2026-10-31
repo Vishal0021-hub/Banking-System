@@ -8,8 +8,10 @@ import java.util.List;
 
 public interface UserService {
     UserProfileDto getProfile(Long authUserId);
+    UserProfileDto getProfileOrAutoCreate(Long authUserId, String email, String fullName);
     UserProfileDto getProfileByEmail(String email);
     UserProfileDto createProfile(Long authUserId, String email, String fullName, String phone);
+    UserProfileDto createProfile(Long authUserId, String email, String fullName, String phone, String panNumber, String aadharNumber);
     UserProfileDto updateProfile(Long authUserId, UpdateProfileRequest request);
     List<UserProfileDto> getAllUsers();
     UserProfileDto updateKycStatus(Long userId, KycStatus status);

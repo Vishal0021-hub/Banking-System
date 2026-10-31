@@ -22,17 +22,33 @@ public class UserController {
 
     private final UserService userService;
 
+    private Long extractUserId(HttpServletRequest request) {
+        String userIdStr = request.getHeader("X-User-Id");
+        if (userIdStr != null && !userIdStr.isBlank()) {
+            try {
+                return Long.parseLong(userIdStr);
+            } catch (NumberFormatException ignored) {}
+        }
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getDetails() instanceof Long) {
+            return (Long) auth.getDetails();
+        }
+        throw new com.banking.common.exception.BadRequestException("Missing or invalid user identification header");
+    }
+
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserProfileDto>> getMyProfile(HttpServletRequest request) {
-        Long userId = Long.parseLong(request.getHeader("X-User-Id"));
-        return ResponseEntity.ok(ApiResponse.success(userService.getProfile(userId)));
+        Long userId = extractUserId(request);
+        String email = request.getHeader("X-User-Email");
+        String name = request.getHeader("X-User-Name");
+        return ResponseEntity.ok(ApiResponse.success(userService.getProfileOrAutoCreate(userId, email, name)));
     }
 
     @PutMapping("/me")
     public ResponseEntity<ApiResponse<UserProfileDto>> updateProfile(
             HttpServletRequest request,
             @Valid @RequestBody UpdateProfileRequest body) {
-        Long userId = Long.parseLong(request.getHeader("X-User-Id"));
+        Long userId = extractUserId(request);
         return ResponseEntity.ok(ApiResponse.success(userService.updateProfile(userId, body), "Profile updated"));
     }
 
@@ -41,9 +57,16 @@ public class UserController {
             @RequestParam Long authUserId,
             @RequestParam String email,
             @RequestParam String fullName,
-            @RequestParam String phone) {
-        UserProfileDto dto = userService.createProfile(authUserId, email, fullName, phone);
+            @RequestParam String phone,
+            @RequestParam(required = false) String panNumber,
+            @RequestParam(required = false) String aadharNumber) {
+        UserProfileDto dto = userService.createProfile(authUserId, email, fullName, phone, panNumber, aadharNumber);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(dto, "Profile created"));
+    }
+
+    @GetMapping("/internal/id/{userId}")
+    public ResponseEntity<ApiResponse<UserProfileDto>> getByIdInternal(@PathVariable Long userId) {
+        return ResponseEntity.ok(ApiResponse.success(userService.getProfile(userId)));
     }
 
     @GetMapping("/internal/{email}")

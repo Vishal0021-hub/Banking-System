@@ -50,8 +50,9 @@ export const Layout = ({ children }) => {
       if (!token) return;
 
       ctrl = new AbortController();
+      const streamUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8088/api/v1'}/notifications/stream`;
       try {
-        await fetchEventSource('http://localhost:8088/api/v1/notifications/stream', {
+        await fetchEventSource(streamUrl, {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`
@@ -60,7 +61,7 @@ export const Layout = ({ children }) => {
           onmessage(msg) {
             if (msg.event === 'notification') {
               const data = JSON.parse(msg.data);
-              toast.success(data.title + '\\n' + data.message, { duration: 5000 });
+              toast.success(`${data.title}\n${data.message}`, { duration: 5000 });
             }
           },
           onerror(err) {

@@ -65,7 +65,15 @@ public class JwtTokenProvider {
     }
 
     public Long extractUserId(String token) {
-        return extractAllClaims(token).get("userId", Long.class);
+        Object userId = extractAllClaims(token).get("userId");
+        if (userId instanceof Number) {
+            return ((Number) userId).longValue();
+        } else if (userId != null) {
+            try {
+                return Long.parseLong(userId.toString());
+            } catch (NumberFormatException ignored) {}
+        }
+        return null;
     }
 
     public boolean validateToken(String token) {

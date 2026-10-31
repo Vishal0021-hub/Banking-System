@@ -57,10 +57,15 @@ public class JwtAuthGatewayFilter extends AbstractGatewayFilterFactory<JwtAuthGa
                     return sendForbidden(exchange, "Access denied: Admin only");
                 }
 
+                Object userIdObj = claims.get("userId");
+                String userIdStr = userIdObj != null ? String.valueOf(userIdObj) : "";
+                String fullName = claims.get("fullName", String.class);
+
                 ServerHttpRequest mutatedRequest = request.mutate()
-                        .header("X-User-Email", claims.getSubject())
-                        .header("X-User-Id", String.valueOf(claims.get("userId", Long.class)))
-                        .header("X-User-Role", role)
+                        .header("X-User-Email", claims.getSubject() != null ? claims.getSubject() : "")
+                        .header("X-User-Id", userIdStr)
+                        .header("X-User-Role", role != null ? role : "")
+                        .header("X-User-Name", fullName != null ? fullName : "")
                         .build();
 
                 return chain.filter(exchange.mutate().request(mutatedRequest).build());

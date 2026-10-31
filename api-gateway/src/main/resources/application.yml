@@ -41,14 +41,14 @@ spring:
         - id: account-service
           uri: lb://account-service
           predicates:
-            - Path=/api/v1/accounts/**, /api/v1/beneficiaries/**
+            - Path=/api/v1/accounts/**,/api/v1/beneficiaries/**
           filters:
             - JwtAuthGatewayFilter
 
         - id: transaction-service
           uri: lb://transaction-service
           predicates:
-            - Path=/api/v1/transactions/**, /api/v1/statements/**
+            - Path=/api/v1/transactions/**,/api/v1/statements/**
           filters:
             - JwtAuthGatewayFilter
 

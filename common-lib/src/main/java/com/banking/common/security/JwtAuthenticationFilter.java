@@ -37,7 +37,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Claims claims = jwtTokenProvider.extractAllClaims(token);
                 String email = claims.getSubject();
                 String role = claims.get("role", String.class);
-                Long userId = claims.get("userId", Long.class);
+                Object userIdObj = claims.get("userId");
+                Long userId = null;
+                if (userIdObj instanceof Number) {
+                    userId = ((Number) userIdObj).longValue();
+                } else if (userIdObj != null) {
+                    try {
+                        userId = Long.parseLong(userIdObj.toString());
+                    } catch (NumberFormatException ignored) {}
+                }
 
                 var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
                 var authToken = new UsernamePasswordAuthenticationToken(email, null, authorities);

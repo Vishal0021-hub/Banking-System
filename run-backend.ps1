@@ -24,7 +24,7 @@ function Start-ServiceWindow {
     Write-Host "Starting $Name..." -ForegroundColor Cyan
     $absPath = Resolve-Path $Path
     $cmd = "try { `$Host.UI.RawUI.WindowTitle = 'Banking-Service-$Name' } catch {}; . ../load-env.ps1; mvn spring-boot:run"
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", $cmd -WorkingDirectory $absPath -WindowStyle Normal
+    Start-Process powershell -ArgumentList "-ExecutionPolicy", "Bypass", "-NoExit", "-Command", $cmd -WorkingDirectory $absPath -WindowStyle Normal
 }
 
 # 1. Eureka Server (Wait for it to be up)

@@ -30,10 +30,24 @@ public class TransactionController {
     private final TransactionService transactionService;
     private final PdfStatementService pdfStatementService;
 
+    private Long extractUserId(HttpServletRequest request) {
+        String userIdStr = request.getHeader("X-User-Id");
+        if (userIdStr != null && !userIdStr.isBlank()) {
+            try {
+                return Long.parseLong(userIdStr);
+            } catch (NumberFormatException ignored) {}
+        }
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getDetails() instanceof Long) {
+            return (Long) auth.getDetails();
+        }
+        throw new com.banking.common.exception.BadRequestException("Missing or invalid user identification header");
+    }
+
     @PostMapping("/transactions/deposit")
     public ResponseEntity<ApiResponse<TransactionDto>> deposit(
             HttpServletRequest req, @Valid @RequestBody DepositRequest request) {
-        Long userId = Long.parseLong(req.getHeader("X-User-Id"));
+        Long userId = extractUserId(req);
         return ResponseEntity.ok(ApiResponse.success(
                 transactionService.deposit(request, userId, req.getRemoteAddr()), "Deposit successful"));
     }
@@ -41,7 +55,7 @@ public class TransactionController {
     @PostMapping("/transactions/withdraw")
     public ResponseEntity<ApiResponse<TransactionDto>> withdraw(
             HttpServletRequest req, @Valid @RequestBody WithdrawRequest request) {
-        Long userId = Long.parseLong(req.getHeader("X-User-Id"));
+        Long userId = extractUserId(req);
         return ResponseEntity.ok(ApiResponse.success(
                 transactionService.withdraw(request, userId, req.getRemoteAddr()), "Withdrawal successful"));
     }
@@ -49,7 +63,7 @@ public class TransactionController {
     @PostMapping("/transactions/transfer")
     public ResponseEntity<ApiResponse<TransactionDto>> transfer(
             HttpServletRequest req, @Valid @RequestBody TransferRequest request) {
-        Long userId = Long.parseLong(req.getHeader("X-User-Id"));
+        Long userId = extractUserId(req);
         return ResponseEntity.ok(ApiResponse.success(
                 transactionService.transfer(request, userId, req.getRemoteAddr()), "Transfer initiated"));
     }
@@ -59,7 +73,7 @@ public class TransactionController {
             HttpServletRequest req,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Long userId = Long.parseLong(req.getHeader("X-User-Id"));
+        Long userId = extractUserId(req);
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(ApiResponse.success(transactionService.getUserTransactions(userId, pageable)));
     }
@@ -87,7 +101,7 @@ public class TransactionController {
 
     @GetMapping("/transactions/audit")
     public ResponseEntity<ApiResponse<List<AuditLog>>> getMyAuditLogs(HttpServletRequest req) {
-        Long userId = Long.parseLong(req.getHeader("X-User-Id"));
+        Long userId = extractUserId(req);
         return ResponseEntity.ok(ApiResponse.success(transactionService.getAuditLogs(userId)));
     }
 

@@ -27,8 +27,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
        Page<Transaction> findByAccountNumber(@Param("accountNumber") String accountNumber, Pageable pageable);
 
        @Query("SELECT t FROM Transaction t WHERE t.fromAccountNumber = :accountNumber " +
-                     "AND t.transactionType = 'TRANSFER' " +
-                     "AND t.createdAt >= :since AND t.status = 'SUCCESS'")
+                     "AND t.transactionType = com.banking.transaction.enums.TransactionType.TRANSFER " +
+                     "AND t.createdAt >= :since AND t.status = com.banking.transaction.enums.TransactionStatus.SUCCESS")
        List<Transaction> findTransfersSince(@Param("accountNumber") String accountNumber,
                      @Param("since") LocalDateTime since);
 
@@ -38,7 +38,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
                      @Param("since") LocalDateTime since);
 
        @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.fromAccountNumber = :accountNumber " +
-                     "AND t.transactionType = 'TRANSFER' AND t.status = 'SUCCESS' " +
+                     "AND t.transactionType = com.banking.transaction.enums.TransactionType.TRANSFER " +
+                     "AND t.status = com.banking.transaction.enums.TransactionStatus.SUCCESS " +
                      "AND t.createdAt >= :since")
        BigDecimal sumTransferAmountSince(@Param("accountNumber") String accountNumber,
                      @Param("since") LocalDateTime since);

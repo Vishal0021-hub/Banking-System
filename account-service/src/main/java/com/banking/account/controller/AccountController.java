@@ -23,11 +23,25 @@ public class AccountController {
 
     private final AccountService accountService;
 
+    private Long extractUserId(HttpServletRequest request) {
+        String userIdStr = request.getHeader("X-User-Id");
+        if (userIdStr != null && !userIdStr.isBlank()) {
+            try {
+                return Long.parseLong(userIdStr);
+            } catch (NumberFormatException ignored) {}
+        }
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getDetails() instanceof Long) {
+            return (Long) auth.getDetails();
+        }
+        throw new com.banking.common.exception.BadRequestException("Missing or invalid user identification header");
+    }
+
     @PostMapping("/accounts")
     public ResponseEntity<ApiResponse<AccountDto>> createAccount(
             HttpServletRequest req,
             @Valid @RequestBody CreateAccountRequest request) {
-        Long userId = Long.parseLong(req.getHeader("X-User-Id"));
+        Long userId = extractUserId(req);
         String email = req.getHeader("X-User-Email");
         String name = req.getHeader("X-User-Name") != null ? req.getHeader("X-User-Name") : email;
         AccountDto dto = accountService.createAccount(userId, email, name, request);
@@ -36,7 +50,7 @@ public class AccountController {
 
     @GetMapping("/accounts")
     public ResponseEntity<ApiResponse<List<AccountDto>>> getMyAccounts(HttpServletRequest req) {
-        Long userId = Long.parseLong(req.getHeader("X-User-Id"));
+        Long userId = extractUserId(req);
         return ResponseEntity.ok(ApiResponse.success(accountService.getUserAccounts(userId)));
     }
 
@@ -69,21 +83,21 @@ public class AccountController {
     public ResponseEntity<ApiResponse<Beneficiary>> addBeneficiary(
             HttpServletRequest req,
             @Valid @RequestBody AddBeneficiaryRequest request) {
-        Long userId = Long.parseLong(req.getHeader("X-User-Id"));
+        Long userId = extractUserId(req);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(accountService.addBeneficiary(userId, request), "Beneficiary added"));
     }
 
     @GetMapping("/beneficiaries")
     public ResponseEntity<ApiResponse<List<Beneficiary>>> getBeneficiaries(HttpServletRequest req) {
-        Long userId = Long.parseLong(req.getHeader("X-User-Id"));
+        Long userId = extractUserId(req);
         return ResponseEntity.ok(ApiResponse.success(accountService.getBeneficiaries(userId)));
     }
 
     @DeleteMapping("/beneficiaries/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteBeneficiary(
             HttpServletRequest req, @PathVariable Long id) {
-        Long userId = Long.parseLong(req.getHeader("X-User-Id"));
+        Long userId = extractUserId(req);
         accountService.deleteBeneficiary(userId, id);
         return ResponseEntity.ok(ApiResponse.success(null, "Beneficiary removed"));
     }

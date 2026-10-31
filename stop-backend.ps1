@@ -22,14 +22,11 @@ if ($serviceTerminals) {
     Write-Host "No open microservice terminal windows found." -ForegroundColor Cyan
 }
 
-# Clean build target folders
+# Clean build target folders recursively
 Write-Host "`nCleaning up build target directories..." -ForegroundColor Yellow
-$serviceDirs = @("eureka-server", "api-gateway", "auth-service", "user-service", "account-service", "transaction-service", "loan-service", "notification-service", "admin-service")
-foreach ($dir in $serviceDirs) {
-    $targetPath = Join-Path $PSScriptRoot "$dir\target"
-    if (Test-Path $targetPath) {
-        Remove-Item -Path $targetPath -Recurse -Force -ErrorAction SilentlyContinue
-        Write-Host "Cleaned $dir\target" -ForegroundColor Cyan
-    }
+Get-ChildItem -Path $PSScriptRoot -Recurse -Directory -Filter "target" -ErrorAction SilentlyContinue | ForEach-Object {
+    $relativePath = $_.FullName.Substring($PSScriptRoot.Length + 1)
+    Remove-Item -Path $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
+    Write-Host "Cleaned: $relativePath" -ForegroundColor Cyan
 }
 Write-Host "Workspace is now extra clean!" -ForegroundColor Green

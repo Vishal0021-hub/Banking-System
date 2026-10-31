@@ -26,17 +26,57 @@ Inspired by JPMorgan Chase internal banking platforms. A full-stack, microservic
 - Redis
 - Apache Kafka (Zookeeper + Kafka Broker)
 
+## Environment Configuration (`.env`)
+Create a `.env` file in the root directory with the following variables (or run `./run-backend.ps1` which automatically configures defaults):
+```env
+# Infrastructure
+DB_HOST=localhost
+DB_PORT=3307
+DB_USERNAME=root
+DB_PASSWORD=root
+
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+
+# Security
+JWT_SECRET=bXlTdXBlclNlY3JldEtleUZvckJhbmtpbmdTeXN0ZW0xMjM0NTY3ODk=
+JWT_EXPIRATION_MS=86400000
+JWT_REFRESH_EXPIRATION_MS=604800000
+
+# Email (Optional)
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your-email@gmail.com
+MAIL_PASSWORD=your-app-password
+
+# Eureka
+EUREKA_USERNAME=eureka
+EUREKA_PASSWORD=eureka123
+```
+
 ## Setup Instructions
 1. Clone the repository.
-2. Create the following MySQL databases: `banking_auth`, `banking_users`, `banking_accounts`, `banking_transactions`, `banking_notifications`, `banking_loans`.
-3. Configure `.env` based on `.env.example`.
-4. Start infrastructure services: MySQL, Redis, Kafka.
-5. Build the project: `mvn clean install`.
-6. Start services in order:
-   - `eureka-server`
-   - `api-gateway`
-   - Remaining services.
-7. Start frontend: `cd frontend && npm install && npm run dev`.
+2. Start infrastructure containers using Docker Compose:
+   ```bash
+   docker compose up -d
+   ```
+3. Build all microservices:
+   ```bash
+   mvn clean install -DskipTests
+   ```
+4. Start backend services:
+   ```powershell
+   ./run-backend.ps1
+   ```
+5. Start frontend:
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
 
 ## Core Features
 - **Security**: JWT-based auth with refresh token rotation.

@@ -50,7 +50,8 @@ export const Layout = ({ children }) => {
       if (!token) return;
 
       ctrl = new AbortController();
-      const streamUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8088/api/v1'}/notifications/stream`;
+      const apiBase = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:8088/api/v1' : '/api/v1');
+      const streamUrl = `${apiBase}/notifications/stream`;
       try {
         await fetchEventSource(streamUrl, {
           method: 'GET',

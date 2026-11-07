@@ -1,0 +1,43 @@
+﻿# =============================================================
+#  .dockerignore — reduces Docker build context size
+#  Build contexts are sent to Docker daemon; ignore anything
+#  not needed to compile the Java code or build the frontend.
+# =============================================================
+
+# Maven build artifacts (will be rebuilt inside container)
+**/target/
+*.class
+
+# Node.js (frontend Dockerfile runs npm ci itself)
+**/node_modules/
+**/dist/
+**/build/
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+
+# Git
+.git/
+.gitignore
+
+# OS junk
+**/.DS_Store
+**/Thumbs.db
+
+# Environment files — NEVER bake into image
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Docs (not needed at build time)
+docs/
+startup-guide.md
+system_architecture.md
+
+# Test / CI artifacts
+**/surefire-reports/

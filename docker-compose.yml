@@ -1,55 +1,341 @@
-version: '3.8'
+﻿# =============================================================
+#  BankOps — Full Stack Docker Compose
+#  Starts the COMPLETE banking system:
+#    Infrastructure: MySQL, Redis, Zookeeper, Kafka
+#    Services:       Eureka, Gateway + 7 Microservices
+#    Frontend:       React SPA via Nginx
+#
+#  Usage:
+#    docker compose --env-file .env up -d --build
+#    docker compose ps
+#    docker compose logs -f auth-service
+#    docker compose down -v   (stops + removes volumes)
+# =============================================================
 
+version: "3.9"
+
+# ---------------------------------------------------------------
+#  Shared healthcheck defaults
+# ---------------------------------------------------------------
+x-healthcheck-defaults: &hc-defaults
+  interval: 20s
+  timeout: 10s
+  retries: 5
+  start_period: 30s
+
+# ---------------------------------------------------------------
+#  Shared Spring Boot service template
+# ---------------------------------------------------------------
+x-spring-service: &spring-service
+  build:
+    context: .        # IMPORTANT: build context is repo ROOT so Dockerfile
+                      # can COPY the parent pom.xml and common-lib
+  restart: unless-stopped
+  networks:
+    - banking-net
+  env_file:
+    - .env
+  depends_on:
+    mysql:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    kafka:
+      condition: service_healthy
+    eureka-server:
+      condition: service_healthy
+
+# ---------------------------------------------------------------
+#  Networks
+# ---------------------------------------------------------------
+networks:
+  banking-net:
+    driver: bridge
+    name: banking-network
+
+# ---------------------------------------------------------------
+#  Persistent Volumes
+# ---------------------------------------------------------------
+volumes:
+  mysql_data:
+  redis_data:
+
+# ---------------------------------------------------------------
+#  Services
+# ---------------------------------------------------------------
 services:
-  # MySQL Database
+
+  # ==============================================================
+  #  INFRASTRUCTURE
+  # ==============================================================
+
   mysql:
     image: mysql:8.0
     container_name: banking-mysql
-    restart: always
+    restart: unless-stopped
+    networks:
+      - banking-net
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: banking_auth # It creates one by default, others we create via script or spring boot
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_DATABASE: banking_auth
     ports:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-init-db.sql:ro
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-root}"]
 
-  # Redis Cache
   redis:
     image: redis:7-alpine
     container_name: banking-redis
-    restart: always
+    restart: unless-stopped
+    networks:
+      - banking-net
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    command: redis-server --save 60 1 --loglevel warning
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD", "redis-cli", "ping"]
+      start_period: 10s
 
-  # Zookeeper (Required for Kafka)
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: banking-zookeeper
+    restart: unless-stopped
+    networks:
+      - banking-net
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD", "bash", "-c", "echo ruok | nc localhost 2181 | grep imok"]
+      start_period: 15s
 
-  # Kafka
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     container_name: banking-kafka
+    restart: unless-stopped
+    networks:
+      - banking-net
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     ports:
       - "9092:9092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # PLAINTEXT  → accessible from host (port 9092)
+      # PLAINTEXT_INTERNAL → used by other containers inside the Docker network
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      start_period: 40s
 
-volumes:
-  mysql_data:
-  redis_data:
+  # ==============================================================
+  #  SPRING BOOT MICROSERVICES
+  # ==============================================================
+
+  eureka-server:
+    <<: *spring-service
+    container_name: banking-eureka
+    build:
+      context: .
+      dockerfile: eureka-server/Dockerfile
+    # Eureka has no service deps — only infra
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_USERNAME: ${EUREKA_USERNAME:-eureka}
+      EUREKA_PASSWORD: ${EUREKA_PASSWORD:-eureka123}
+    ports:
+      - "8761:8761"
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      start_period: 60s
+
+  api-gateway:
+    <<: *spring-service
+    container_name: banking-gateway
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_USERNAME: ${EUREKA_USERNAME:-eureka}
+      EUREKA_PASSWORD: ${EUREKA_PASSWORD:-eureka123}
+    ports:
+      - "8088:8088"
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8088/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      start_period: 90s
+
+  auth-service:
+    <<: *spring-service
+    container_name: banking-auth
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: mysql
+      DB_PORT: 3306
+      REDIS_HOST: redis
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    ports:
+      - "8081:8081"
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      start_period: 90s
+
+  user-service:
+    <<: *spring-service
+    container_name: banking-user
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: mysql
+      DB_PORT: 3306
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    ports:
+      - "8082:8082"
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      start_period: 90s
+
+  account-service:
+    <<: *spring-service
+    container_name: banking-account
+    build:
+      context: .
+      dockerfile: account-service/Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: mysql
+      DB_PORT: 3306
+    ports:
+      - "8083:8083"
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      start_period: 90s
+
+  transaction-service:
+    <<: *spring-service
+    container_name: banking-transaction
+    build:
+      context: .
+      dockerfile: transaction-service/Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: mysql
+      DB_PORT: 3306
+      REDIS_HOST: redis
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    ports:
+      - "8084:8084"
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8084/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      start_period: 90s
+
+  notification-service:
+    <<: *spring-service
+    container_name: banking-notification
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: mysql
+      DB_PORT: 3306
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    ports:
+      - "8085:8085"
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8085/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      start_period: 90s
+
+  loan-service:
+    <<: *spring-service
+    container_name: banking-loan
+    build:
+      context: .
+      dockerfile: loan-service/Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: mysql
+      DB_PORT: 3306
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    ports:
+      - "8086:8086"
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8086/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      start_period: 90s
+
+  admin-service:
+    <<: *spring-service
+    container_name: banking-admin
+    build:
+      context: .
+      dockerfile: admin-service/Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: mysql
+      DB_PORT: 3306
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    ports:
+      - "8087:8087"
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8087/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      start_period: 90s
+
+  # ==============================================================
+  #  FRONTEND — React SPA served via Nginx
+  # ==============================================================
+
+  frontend:
+    container_name: banking-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - banking-net
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    ports:
+      - "80:80"
+    healthcheck:
+      <<: *hc-defaults
+      test: ["CMD-SHELL", "wget -qO- http://localhost:80 | grep -q '<div id=\"root\">' || exit 1"]
+      start_period: 30s

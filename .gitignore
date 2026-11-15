@@ -36,3 +36,14 @@ Desktop.ini
 # Startup guide
 startup-guide.md
 
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+!*.tfvars.example
+.terraformrc
+terraform.rc
+

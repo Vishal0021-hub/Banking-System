@@ -1,0 +1,33 @@
+﻿# ==============================================================================
+#  BankOps — Example Terraform Variable Definitions
+#  Copy this file to "terraform.tfvars" and customize for your deployment
+# ==============================================================================
+
+# Target AWS Region
+aws_region  = "us-east-1"
+environment = "dev"
+
+# Network CIDRs
+vpc_cidr            = "10.0.0.0/16"
+public_subnet_cidr  = "10.0.1.0/24"
+private_subnet_cidr = "10.0.2.0/24"
+availability_zone   = "us-east-1a"
+
+# Administrator IP address for SSH and Eureka access (Replace with your actual public IP, e.g. "203.0.113.25/32")
+admin_ip = "0.0.0.0/0"
+
+# EC2 Instance Sizing
+# t3.large provides 2 vCPUs and 8GB RAM (recommended minimum for 9 Spring Boot microservices, Kafka, Redis, and MySQL)
+app_instance_type = "t3.large"
+root_volume_size  = 50
+
+# Single-Node Prototype Deployment (Set to true to assign public IP directly and avoid NAT Gateway cost)
+deploy_in_public_subnet = true
+enable_nat_gateway      = false
+
+# SSH Authentication:
+# Option A: Specify the name of an existing Key Pair in your AWS account
+ssh_key_name = ""
+
+# Option B: Or paste the text of your public key directly (used to create a new Key Pair automatically)
+# ssh_public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC..."

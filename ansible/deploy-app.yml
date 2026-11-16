@@ -1,0 +1,21 @@
+﻿---
+# ==============================================================================
+#  BankOps — Fast Application-Only Rollout Playbook
+#  Skips OS packages and Docker engine installation.
+#  Ideal for ongoing releases, configuration changes, or CI/CD pipelines.
+#
+#  Usage:
+#    ansible-playbook -i inventory/hosts.ini deploy-app.yml
+# ==============================================================================
+
+- name: Fast Application Container Rollout
+  hosts: app_servers
+  become: yes
+  gather_facts: no
+
+  vars_files:
+    - group_vars/all.yml
+
+  roles:
+    - role: deploy
+      tags: [deploy, app]

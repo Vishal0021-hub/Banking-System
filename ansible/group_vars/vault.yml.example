@@ -1,0 +1,13 @@
+﻿# ==============================================================================
+#  BankOps — Example Vault Encrypted Secrets
+#  To use:
+#    cp vault.yml.example vault.yml
+#    ansible-vault encrypt vault.yml
+# ==============================================================================
+
+vault_db_password: "SuperSecretProductionDatabasePassword123!"
+vault_jwt_secret: "bXlTdXBlclNlY3JldEtleUZvckJhbmtpbmdTeXN0ZW0xMjM0NTY3ODk="
+vault_eureka_username: "eureka_admin"
+vault_eureka_password: "StrongEurekaClusterPassword456!"
+vault_mail_username: "alerts@bankops.internal"
+vault_mail_password: "smtp-app-password-here"

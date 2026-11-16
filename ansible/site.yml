@@ -1,0 +1,41 @@
+﻿---
+# ==============================================================================
+#  BankOps — Master Production Deployment Playbook
+#  Orchestrates host configuration, Docker setup, and application rollout
+#
+#  Usage:
+#    ansible-playbook -i inventory/hosts.ini site.yml
+#    With Vault:
+#    ansible-playbook -i inventory/hosts.ini site.yml --ask-vault-pass
+# ==============================================================================
+
+- name: Deploy BankOps Microservices Infrastructure and Application Mesh
+  hosts: app_servers
+  become: yes
+  gather_facts: yes
+
+  vars_files:
+    - group_vars/all.yml
+    # Uncomment when using encrypted secrets
+    # - group_vars/vault.yml
+
+  roles:
+    - role: common
+      tags: [common, baseline, security]
+
+    - role: docker
+      tags: [docker, runtime]
+
+    - role: deploy
+      tags: [deploy, app, containers]
+
+  post_tasks:
+    - name: Deployment Completion Banner
+      debug:
+        msg:
+          - "=================================================================="
+          - "  BankOps Enterprise Banking System Successfully Deployed!"
+          - "  Frontend UI:     http://{{ ansible_host }}"
+          - "  API Gateway:     http://{{ ansible_host }}:8088"
+          - "  Eureka Registry: http://{{ ansible_host }}:8761"
+          - "=================================================================="

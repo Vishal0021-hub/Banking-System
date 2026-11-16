@@ -1,0 +1,36 @@
+﻿---
+# ==============================================================================
+#  BankOps — Emergency Stop & Rollback Playbook
+#  Stops running containers cleanly and displays status.
+#
+#  Usage:
+#    ansible-playbook -i inventory/hosts.ini rollback.yml
+# ==============================================================================
+
+- name: Graceful Stop and Rollback of Banking Application Stack
+  hosts: app_servers
+  become: yes
+  gather_facts: no
+
+  vars_files:
+    - group_vars/all.yml
+
+  tasks:
+    - name: Stop all banking containers
+      command: docker compose --env-file .env down
+      args:
+        chdir: "{{ app_dir }}"
+      register: compose_down
+      failed_when: false
+
+    - name: Display shutdown output
+      debug:
+        var: compose_down.stdout_lines
+
+    - name: Verify no orphan banking containers remain running
+      command: docker ps --filter "name=banking-" --format "{{ '{{' }}.Names{{ '}}' }}: {{ '{{' }}.Status{{ '}}' }}"
+      register: remaining_containers
+
+    - name: Print cleanup confirmation
+      debug:
+        msg: "Clean shutdown complete. Active banking containers: {{ remaining_containers.stdout_lines | default('None') }}"

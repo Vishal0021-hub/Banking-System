@@ -1,0 +1,68 @@
+﻿# ==============================================================================
+#  Role: common — Host OS Baseline & Security
+# ==============================================================================
+
+- name: Update apt package cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install baseline system packages
+  apt:
+    name: "{{ system_packages }}"
+    state: present
+
+- name: Ensure banking system group exists
+  group:
+    name: "{{ app_group }}"
+    state: present
+    system: yes
+
+- name: Ensure banking application service user exists
+  user:
+    name: "{{ app_user }}"
+    group: "{{ app_group }}"
+    shell: /bin/bash
+    home: "{{ app_dir }}"
+    create_home: no
+    system: yes
+    state: present
+
+- name: Ensure application directory exists with strict permissions
+  file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0750"
+
+- name: Configure system kernel parameter for memory mapping (Kafka stability)
+  sysctl:
+    name: vm.max_map_count
+    value: "262144"
+    state: present
+    reload: yes
+
+- name: Ensure UFW firewall allows SSH
+  ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+
+- name: Ensure UFW firewall allows HTTP traffic for Frontend
+  ufw:
+    rule: allow
+    port: "80"
+    proto: tcp
+
+- name: Ensure UFW firewall allows API Gateway traffic
+  ufw:
+    rule: allow
+    port: "8088"
+    proto: tcp
+
+- name: Enable UFW firewall
+  ufw:
+    state: enabled
+    policy: deny
+    direction: incoming

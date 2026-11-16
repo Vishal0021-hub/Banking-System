@@ -1,0 +1,143 @@
+﻿# ==============================================================================
+#  Role: deploy — Multi-Service Container Orchestration & Health Verification
+# ==============================================================================
+
+- name: Ensure target deployment directory exists
+  file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0750"
+
+- name: Clone or update Banking System repository code on the host
+  git:
+    repo: "https://github.com/Vishal0021-hub/Banking-System.git"
+    dest: "{{ app_dir }}"
+    version: "origin"
+    force: yes
+  become_user: root
+
+- name: Deploy secured environment configuration (.env)
+  template:
+    src: env.j2
+    dest: "{{ app_dir }}/.env"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0600"
+  notify: restart banking stack
+
+- name: Deploy database initialization script
+  copy:
+    src: "E:/Projects/GitHub/Banking-System/init-db.sql"
+    dest: "{{ app_dir }}/init-db.sql"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0644"
+
+- name: Deploy production docker-compose configuration
+  copy:
+    src: "E:/Projects/GitHub/Banking-System/docker-compose.yml"
+    dest: "{{ app_dir }}/docker-compose.yml"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0644"
+
+# ------------------------------------------------------------------------------
+# Phase 1 of Deployment: Backing Infrastructure (MySQL, Redis, Zookeeper, Kafka)
+# ------------------------------------------------------------------------------
+- name: Start Tier 1 — Backing Infrastructure (MySQL, Redis, Kafka)
+  command: docker compose --env-file .env up -d mysql redis zookeeper kafka
+  args:
+    chdir: "{{ app_dir }}"
+  register: infra_startup
+  changed_when: "'Started' in infra_startup.stdout or 'Created' in infra_startup.stdout"
+
+- name: Wait for MySQL to become ready (port 3306)
+  wait_for:
+    host: 127.0.0.1
+    port: 3307
+    timeout: 90
+    delay: 5
+
+- name: Wait for Redis to become ready (port 6379)
+  wait_for:
+    host: 127.0.0.1
+    port: 6379
+    timeout: 45
+    delay: 3
+
+# ------------------------------------------------------------------------------
+# Phase 2 of Deployment: Service Discovery (Eureka Server)
+# ------------------------------------------------------------------------------
+- name: Start Tier 2 — Service Discovery (Eureka Server)
+  command: docker compose --env-file .env up -d eureka-server
+  args:
+    chdir: "{{ app_dir }}"
+  register: eureka_startup
+  changed_when: "'Started' in eureka_startup.stdout or 'Created' in eureka_startup.stdout"
+
+- name: Wait for Eureka Server actuator health endpoint (Port 8761)
+  uri:
+    url: "http://127.0.0.1:8761/actuator/health"
+    method: GET
+    status_code: 200
+  register: eureka_health
+  until: eureka_health.status == 200
+  retries: 24
+  delay: 5
+
+# ------------------------------------------------------------------------------
+# Phase 3 of Deployment: API Gateway & Core Microservices
+# ------------------------------------------------------------------------------
+- name: Start Tier 3 — API Gateway and Core Microservices
+  command: >
+    docker compose --env-file .env up -d
+    api-gateway
+    auth-service
+    user-service
+    account-service
+    transaction-service
+    notification-service
+    loan-service
+    admin-service
+  args:
+    chdir: "{{ app_dir }}"
+  register: services_startup
+  changed_when: "'Started' in services_startup.stdout or 'Created' in services_startup.stdout"
+
+# ------------------------------------------------------------------------------
+# Phase 4 of Deployment: Frontend (React SPA via Nginx)
+# ------------------------------------------------------------------------------
+- name: Start Tier 4 — Client Frontend (Nginx SPA)
+  command: docker compose --env-file .env up -d frontend
+  args:
+    chdir: "{{ app_dir }}"
+  register: frontend_startup
+  changed_when: "'Started' in frontend_startup.stdout or 'Created' in frontend_startup.stdout"
+
+# ------------------------------------------------------------------------------
+# Phase 5 of Deployment: Comprehensive Health Verification & Smoke Tests
+# ------------------------------------------------------------------------------
+- name: Pause 15 seconds to allow microservices registration with Eureka
+  pause:
+    seconds: 15
+
+- name: Verify health endpoints across deployed microservices
+  uri:
+    url: "{{ item.url }}"
+    method: GET
+    status_code: "{{ item.expected_status }}"
+    timeout: 10
+  loop: "{{ health_endpoints }}"
+  register: health_results
+  until: health_results.status == item.expected_status
+  retries: 10
+  delay: 5
+
+- name: Print BankOps Deployment Verification Summary
+  debug:
+    msg: "SUCCESS: {{ item.item.name }} is UP and healthy (HTTP {{ item.status }})"
+  loop: "{{ health_results.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"

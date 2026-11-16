@@ -1,0 +1,8 @@
+﻿# ==============================================================================
+#  Role: deploy — Handlers
+# ==============================================================================
+
+- name: restart banking stack
+  command: docker compose --env-file .env down && docker compose --env-file .env up -d
+  args:
+    chdir: "{{ app_dir }}"

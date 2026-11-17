@@ -1,4 +1,4 @@
-﻿# =============================================================
+# =============================================================
 #  BankOps — Full Stack Docker Compose
 #  Starts the COMPLETE banking system:
 #    Infrastructure: MySQL, Redis, Zookeeper, Kafka
@@ -114,10 +114,6 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
-    healthcheck:
-      <<: *hc-defaults
-      test: ["CMD", "bash", "-c", "echo ruok | nc localhost 2181 | grep imok"]
-      start_period: 15s
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
@@ -126,8 +122,7 @@ services:
     networks:
       - banking-net
     depends_on:
-      zookeeper:
-        condition: service_healthy
+      - zookeeper
     ports:
       - "9092:9092"
     environment:
@@ -221,6 +216,7 @@ services:
       DB_HOST: mysql
       DB_PORT: 3306
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      MANAGEMENT_HEALTH_MAIL_ENABLED: "false"
     ports:
       - "8082:8082"
     healthcheck:
@@ -275,6 +271,7 @@ services:
       DB_HOST: mysql
       DB_PORT: 3306
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      MANAGEMENT_HEALTH_MAIL_ENABLED: "false"
     ports:
       - "8085:8085"
     healthcheck:
@@ -293,6 +290,7 @@ services:
       DB_HOST: mysql
       DB_PORT: 3306
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      MANAGEMENT_HEALTH_MAIL_ENABLED: "false"
     ports:
       - "8086:8086"
     healthcheck:
@@ -311,6 +309,7 @@ services:
       DB_HOST: mysql
       DB_PORT: 3306
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      MANAGEMENT_HEALTH_MAIL_ENABLED: "false"
     ports:
       - "8087:8087"
     healthcheck:
@@ -337,5 +336,5 @@ services:
       - "80:80"
     healthcheck:
       <<: *hc-defaults
-      test: ["CMD-SHELL", "wget -qO- http://localhost:80 | grep -q '<div id=\"root\">' || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:80 | grep -q '<div id=\"root\">' || exit 1"]
       start_period: 30s

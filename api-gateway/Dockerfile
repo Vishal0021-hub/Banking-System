@@ -8,7 +8,7 @@ WORKDIR /build
 COPY pom.xml /build/pom.xml
 COPY common-lib /build/common-lib
 COPY api-gateway /build/api-gateway
-RUN mvn -f /build/pom.xml install -pl common-lib -am -DskipTests --no-transfer-progress
+RUN mvn -f /build/pom.xml -N install -DskipTests --no-transfer-progress && mvn -f /build/common-lib/pom.xml install -DskipTests --no-transfer-progress
 RUN mvn -f /build/api-gateway/pom.xml package -DskipTests --no-transfer-progress
 
 FROM amazoncorretto:21-alpine

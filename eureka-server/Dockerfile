@@ -18,7 +18,7 @@ COPY common-lib /build/common-lib
 COPY eureka-server /build/eureka-server
 
 # 4. Build only common-lib then this service (skip tests in CI — tests run separately)
-RUN mvn -f /build/pom.xml install -pl common-lib -am -DskipTests --no-transfer-progress
+RUN mvn -f /build/pom.xml -N install -DskipTests --no-transfer-progress && mvn -f /build/common-lib/pom.xml install -DskipTests --no-transfer-progress
 RUN mvn -f /build/eureka-server/pom.xml package -DskipTests --no-transfer-progress
 
 # ---- Stage 2: Runtime ----

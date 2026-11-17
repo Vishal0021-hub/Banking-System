@@ -41,8 +41,15 @@ locals {
               #!/bin/bash
               set -e
 
-              # System update
+              # System update & Swapfile configuration for Free-Tier memory expansion
               export DEBIAN_FRONTEND=noninteractive
+              fallocate -l 8G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=8192
+              chmod 600 /swapfile
+              mkswap /swapfile
+              swapon /swapfile
+              echo '/swapfile none swap sw 0 0' >> /etc/fstab
+              sysctl vm.swappiness=20
+
               apt-get update -y
               apt-get upgrade -y
               apt-get install -y curl wget git jq ca-certificates gnupg lsb-release

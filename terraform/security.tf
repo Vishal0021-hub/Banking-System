@@ -62,6 +62,15 @@ resource "aws_security_group" "app_sg" {
     cidr_blocks = [var.vpc_cidr]
   }
 
+  # Nagios Core Web Dashboard
+  ingress {
+    description = "Nagios Core Web Monitoring Dashboard"
+    from_port   = 8089
+    to_port     = 8089
+    protocol    = "tcp"
+    cidr_blocks = [var.admin_ip]
+  }
+
   # Self-referencing ingress: all internal communication between containerized services
   ingress {
     description = "Allow internal inter-service communication within security group"

@@ -1,4 +1,4 @@
-﻿# ==============================================================================
+# ==============================================================================
 #  BankOps — Standalone Nagios Core Monitoring Service
 #  Starts Nagios Core 4.4+ with Apache Web Dashboard on Port 8089
 #
@@ -18,15 +18,15 @@ services:
     ports:
       - "8089:80"
     environment:
-      - NAGIOSADMIN_USER=nagiosadmin
-      - NAGIOSADMIN_PASS=bankops123
-      - NAGIOS_TIMEZONE=Asia/Kolkata
+      - NAGIOSADMIN_USER=${NAGIOSADMIN_USER:-nagiosadmin}
+      - NAGIOSADMIN_PASS=${NAGIOSADMIN_PASS:-bankops123}
+      - NAGIOS_TIMEZONE=${TZ:-Asia/Kolkata}
     volumes:
       - ./conf.d:/opt/nagios/etc/conf.d:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- --user=nagiosadmin --password=bankops123 http://127.0.0.1/nagios/ || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- --user=$${NAGIOSADMIN_USER:-nagiosadmin} --password=$${NAGIOSADMIN_PASS:-bankops123} http://127.0.0.1/nagios/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

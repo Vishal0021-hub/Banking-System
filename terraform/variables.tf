@@ -5,7 +5,7 @@
 variable "aws_region" {
   description = "Target AWS deployment region"
   type        = string
-  default     = "us-east-1"
+  default     = "ap-south-1"
 }
 
 variable "environment" {
@@ -35,7 +35,7 @@ variable "private_subnet_cidr" {
 variable "availability_zone" {
   description = "Availability zone for subnet placement"
   type        = string
-  default     = "us-east-1a"
+  default     = "ap-south-1a"
 }
 
 variable "admin_ip" {
@@ -45,9 +45,9 @@ variable "admin_ip" {
 }
 
 variable "app_instance_type" {
-  description = "EC2 instance type for the banking application host (t3.large recommended for 8GB RAM)"
+  description = "EC2 instance type for the banking application host (t3.small with swap for prototype)"
   type        = string
-  default     = "t3.large"
+  default     = "t3.small"
 }
 
 variable "root_volume_size" {

@@ -1,4 +1,4 @@
-﻿---
+---
 # ==============================================================================
 #  BankOps — Fast Application-Only Rollout Playbook
 #  Skips OS packages and Docker engine installation.

@@ -1,22 +1,72 @@
-﻿# ==============================================================================
+# ==============================================================================
 #  Role: deploy — Multi-Service Container Orchestration & Health Verification
 # ==============================================================================
 
-- name: Ensure target deployment directory exists
+- name: Ensure banking system group exists
+  group:
+    name: "{{ app_group }}"
+    state: present
+    system: yes
+  tags: [always]
+
+- name: Ensure banking application service user exists
+  user:
+    name: "{{ app_user }}"
+    group: "{{ app_group }}"
+    shell: /bin/bash
+    home: "{{ app_dir }}"
+    create_home: no
+    system: yes
+    state: present
+  tags: [always]
+
+- name: Check if git repository is already cloned on host
+  stat:
+    path: "{{ app_dir }}/.git"
+  register: app_git_repo
+  tags: [always]
+
+- name: Clean uninitialized deployment directory if not a git repository
+  file:
+    path: "{{ app_dir }}"
+    state: absent
+  when: not app_git_repo.stat.exists
+  tags: [always]
+
+- name: Ensure target deployment directory exists with strict permissions
   file:
     path: "{{ app_dir }}"
     state: directory
     owner: "{{ app_user }}"
     group: "{{ app_group }}"
     mode: "0750"
+  tags: [always]
+
+- name: Configure git safe directory for deployment path
+  command: git config --system --replace-all safe.directory "{{ app_dir }}"
+  tags: [always]
+
+- name: Configure git safe directory in global root config
+  command: git config --global --replace-all safe.directory "{{ app_dir }}"
+  tags: [always]
 
 - name: Clone or update Banking System repository code on the host
   git:
-    repo: "https://github.com/Vishal0021-hub/Banking-System.git"
+    repo: "{{ 'https://' + github_token + '@github.com/Vishal0021-hub/Banking-System.git' if (github_token is defined and github_token | length > 0) else 'https://github.com/Vishal0021-hub/Banking-System.git' }}"
     dest: "{{ app_dir }}"
     version: "origin"
     force: yes
-  become_user: root
+  tags: [always]
+
+- name: Ensure target deployment directory permissions
+  file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0750"
+    recurse: yes
+  tags: [always]
 
 - name: Deploy secured environment configuration (.env)
   template:
@@ -25,23 +75,25 @@
     owner: "{{ app_user }}"
     group: "{{ app_group }}"
     mode: "0600"
-  notify: restart banking stack
+  tags: [config, deploy]
 
 - name: Deploy database initialization script
   copy:
-    src: "E:/Projects/GitHub/Banking-System/init-db.sql"
+    src: "{{ playbook_dir }}/../init-db.sql"
     dest: "{{ app_dir }}/init-db.sql"
     owner: "{{ app_user }}"
     group: "{{ app_group }}"
     mode: "0644"
+  tags: [config, deploy]
 
 - name: Deploy production docker-compose configuration
   copy:
-    src: "E:/Projects/GitHub/Banking-System/docker-compose.yml"
+    src: "{{ playbook_dir }}/../docker-compose.yml"
     dest: "{{ app_dir }}/docker-compose.yml"
     owner: "{{ app_user }}"
     group: "{{ app_group }}"
     mode: "0644"
+  tags: [config, deploy]
 
 # ------------------------------------------------------------------------------
 # Phase 1 of Deployment: Backing Infrastructure (MySQL, Redis, Zookeeper, Kafka)
@@ -52,20 +104,23 @@
     chdir: "{{ app_dir }}"
   register: infra_startup
   changed_when: "'Started' in infra_startup.stdout or 'Created' in infra_startup.stdout"
+  tags: [infra, deploy]
 
-- name: Wait for MySQL to become ready (port 3306)
+- name: Wait for MySQL to become ready (port 3307)
   wait_for:
     host: 127.0.0.1
     port: 3307
-    timeout: 90
+    timeout: 120
     delay: 5
+  tags: [infra, deploy]
 
 - name: Wait for Redis to become ready (port 6379)
   wait_for:
     host: 127.0.0.1
     port: 6379
-    timeout: 45
+    timeout: 60
     delay: 3
+  tags: [infra, deploy]
 
 # ------------------------------------------------------------------------------
 # Phase 2 of Deployment: Service Discovery (Eureka Server)
@@ -76,6 +131,7 @@
     chdir: "{{ app_dir }}"
   register: eureka_startup
   changed_when: "'Started' in eureka_startup.stdout or 'Created' in eureka_startup.stdout"
+  tags: [eureka, deploy]
 
 - name: Wait for Eureka Server actuator health endpoint (Port 8761)
   uri:
@@ -83,9 +139,10 @@
     method: GET
     status_code: 200
   register: eureka_health
-  until: eureka_health.status == 200
-  retries: 24
+  until: (eureka_health.status | default(0)) == 200
+  retries: 40
   delay: 5
+  tags: [eureka, deploy]
 
 # ------------------------------------------------------------------------------
 # Phase 3 of Deployment: API Gateway & Core Microservices
@@ -105,6 +162,7 @@
     chdir: "{{ app_dir }}"
   register: services_startup
   changed_when: "'Started' in services_startup.stdout or 'Created' in services_startup.stdout"
+  tags: [services, backend, deploy]
 
 # ------------------------------------------------------------------------------
 # Phase 4 of Deployment: Frontend (React SPA via Nginx)
@@ -115,13 +173,15 @@
     chdir: "{{ app_dir }}"
   register: frontend_startup
   changed_when: "'Started' in frontend_startup.stdout or 'Created' in frontend_startup.stdout"
+  tags: [frontend, deploy]
 
 # ------------------------------------------------------------------------------
 # Phase 5 of Deployment: Comprehensive Health Verification & Smoke Tests
 # ------------------------------------------------------------------------------
-- name: Pause 15 seconds to allow microservices registration with Eureka
+- name: Pause 20 seconds to allow microservices registration with Eureka
   pause:
-    seconds: 15
+    seconds: 20
+  tags: [verify, healthcheck, deploy]
 
 - name: Verify health endpoints across deployed microservices
   uri:
@@ -131,9 +191,10 @@
     timeout: 10
   loop: "{{ health_endpoints }}"
   register: health_results
-  until: health_results.status == item.expected_status
-  retries: 10
-  delay: 5
+  until: (health_results.status | default(0)) == item.expected_status
+  retries: 30
+  delay: 10
+  tags: [verify, healthcheck, deploy]
 
 - name: Print BankOps Deployment Verification Summary
   debug:
@@ -141,3 +202,4 @@
   loop: "{{ health_results.results }}"
   loop_control:
     label: "{{ item.item.name }}"
+  tags: [verify, healthcheck, deploy]

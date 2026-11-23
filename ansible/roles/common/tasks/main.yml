@@ -1,4 +1,4 @@
-﻿# ==============================================================================
+# ==============================================================================
 #  Role: common — Host OS Baseline & Security
 # ==============================================================================
 
@@ -59,6 +59,12 @@
   ufw:
     rule: allow
     port: "8088"
+    proto: tcp
+
+- name: Ensure UFW firewall allows Eureka Dashboard traffic
+  ufw:
+    rule: allow
+    port: "8761"
     proto: tcp
 
 - name: Enable UFW firewall

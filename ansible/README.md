@@ -1,4 +1,4 @@
-﻿# BankOps — Configuration Management & Deployment Automation (Ansible)
+# BankOps — Configuration Management & Deployment Automation (Ansible)
 
 This directory contains the production-ready **Ansible** automation playbooks and roles for configuring target Linux hosts, installing container runtimes, securely managing secrets, and orchestrating the multi-service **Enterprise Banking System**.
 
